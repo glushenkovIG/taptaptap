@@ -1,0 +1,5 @@
+timed true
+dump_file dump.bin
+subnet 10.1.0.0/24
+node urxvt -e /bin/bash &
+node urxvt -e /bin/bash &
