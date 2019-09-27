@@ -53,30 +53,30 @@ public:
             logger_.say(log::Level::WARN, "unknown protocol ID: %u", proto);
             return false;
         }
-        //if (npkt < sizeof(proto::ipv4_Header) + sizeof(proto::tcp_Header)) {
-        //    logger_.say(log::Level::WARN, "invalid packet");
-        //    return false;
-        //}
-        //if (src_idx != simulate_for_idx_)
-        //    return true;
-        //if (dst_idx == simulate_for_idx_)
-        //    return true;
-        //auto tcp_hdr = reinterpret_cast<proto::tcp_Header *>(pkt + 4 * ip_hdr->ihl);
-        //if ((tcp_hdr->flags & proto::TCP_SYN) && !(tcp_hdr->flags & proto::TCP_ACK)) {
-        //    const auto pipe_idx = to_pipe_idx_(dst_idx);
-        //    const uint16_t port = tcp_hdr->dport.load();
-        //    util::full_write(pipes_to_children[pipe_idx].write_end, &port, sizeof(port),
-        //                     "write() to pipe");
-        //    char c;
-        //    if (util::check_retval(
-        //            ::read(pipes_from_children[pipe_idx].read_end, &c, 1),
-        //            "read() from pipe"
-        //        ) == 0)
-        //    {
-        //        logger_.say(log::Level::FATAL, "child closed the pipe");
-        //        ::abort();
-        //    }
-        //}
+        if (npkt < sizeof(proto::ipv4_Header) + sizeof(proto::tcp_Header)) {
+            logger_.say(log::Level::WARN, "invalid packet");
+            return false;
+        }
+        if (src_idx != simulate_for_idx_)
+            return true;
+        if (dst_idx == simulate_for_idx_)
+            return true;
+        auto tcp_hdr = reinterpret_cast<proto::tcp_Header *>(pkt + 4 * ip_hdr->ihl);
+        if ((tcp_hdr->flags & proto::TCP_SYN) && !(tcp_hdr->flags & proto::TCP_ACK)) {
+            const auto pipe_idx = to_pipe_idx_(dst_idx);
+            const uint16_t port = tcp_hdr->dport.load();
+            util::full_write(pipes_to_children[pipe_idx].write_end, &port, sizeof(port),
+                             "write() to pipe");
+            char c;
+            if (util::check_retval(
+                    ::read(pipes_from_children[pipe_idx].read_end, &c, 1),
+                    "read() from pipe"
+                ) == 0)
+            {
+                logger_.say(log::Level::FATAL, "child closed the pipe");
+                ::abort();
+            }
+        }
         return true;
     }
 
@@ -264,7 +264,7 @@ public:
             switch (m.ev) {
             case dump::Meta::EV_CONN_SRV:
                 if (m.saddr == my_addr && m.daddr == peer_addr) {
-                    //read_from_pipe_();
+                    read_from_pipe_();
                     prepare_server_(m.sport);
                     Conn conn{m.sport, m.dport};
                     conns_[conn] = accept_(srv_sock_[m.sport], peer_addr);

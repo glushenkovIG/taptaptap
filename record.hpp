@@ -107,9 +107,8 @@ public:
         const uint32_t offset = tcp_hdr->seq.load() - datum.init_seqnum;
         const uint32_t nwritten_lo = static_cast<uint32_t>(datum.nwritten);
         if (offset > nwritten_lo) {
-            //logger_.say(log::Level::WARN, "out-of-order packet");
-            //TODO
-            return true;
+            logger_.say(log::Level::WARN, "out-of-order packet");
+            return false;
         }
         const uint32_t recent_offset = nwritten_lo - offset;
 
