@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <fstream>
 #include <exception>
 #include <string>
@@ -61,6 +62,7 @@ public:
 
     Item read()
     {
+        const char *WHITESPACE = " \t";
         while (true) {
             std::string line;
             if (!std::getline(stream_, line))
@@ -68,10 +70,18 @@ public:
             ++line_no_;
             if (line.empty() || line[0] == '#')
                 continue;
-            const auto space_pos = line.find(' ');
-            if (space_pos >= line.size() || space_pos == 0)
+
+            const auto key_end = line.find_first_of(WHITESPACE);
+            if (key_end == std::string::npos || key_end == 0)
                 throw InvalidFormat(line_no_);
-            return {line.substr(0, space_pos), line.substr(space_pos + 1), line_no_};
+
+            auto value_begin = key_end + 1;
+            while (line.find_first_of(WHITESPACE, value_begin) == value_begin)
+                ++value_begin;
+            if (value_begin == line.size())
+                throw InvalidFormat(line_no_);
+
+            return {line.substr(0, key_end), line.substr(value_begin), line_no_};
         }
     }
 };

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <utility>
 #include "subnet.hpp"
 #include "router.hpp"
@@ -66,6 +67,8 @@ static void print_usage_and_exit(const std::string &what = "")
 
 int main(int argc, char **argv)
 {
+    ::signal(SIGPIPE, SIG_IGN);
+
     if (argc < 2)
         ::print_usage_and_exit();
 
@@ -145,15 +148,14 @@ int main(int argc, char **argv)
             if (i == static_cast<size_t>(replay_for_node)) {
                 ::run_shell(opts.nodes[i]);
             } else {
-                util::fork_do([&]() {
-                    return replay::child_main(
-                        reader,
-                        subnet,
-                        i + 1,
-                        replay_for_node + 1,
-                        opts.timed,
-                        handler.child_pipe(i));
-                });
+                const auto log_prefix = std::string("replay child for ID ") + std::to_string(i + 1);
+                replay::Child child(
+                    i + 1,
+                    replay_for_node + 1,
+                    subnet,
+                    log::Logger(logger, log_prefix),
+                    handler.child_pipe(i));
+                util::fork_do([&]() { return child.main(reader, opts.timed); });
             }
         }
         auto router = router::Router<replay::Handler>(

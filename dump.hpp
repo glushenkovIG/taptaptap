@@ -30,6 +30,11 @@ struct Meta
     uint16_t sport;
     uint16_t dport;
     uint32_t ts;
+
+    static Meta make_last()
+    {
+        return {LAST_EV, 0, 0, 0, 0, 0, 0};
+    }
 };
 
 void bswap_fields(Meta &m)
@@ -53,35 +58,19 @@ class Reader
 {
     util::UnixFd fd_;
 
-    bool full_read_(void *buf, size_t nbuf)
-    {
-        for (size_t nread = 0; nread < nbuf;) {
-            const ssize_t n = util::check_retval(
-                ::read(fd_, reinterpret_cast<char *>(buf) + nread, nbuf - nread),
-                "read() from dump file");
-            if (!n) {
-                if (!nread)
-                    return false;
-                throw Corrupted{};
-            }
-            nread += n;
-        }
-        return true;
-    }
-
 public:
     Reader(util::UnixFd &&fd) : fd_(std::move(fd)) {}
 
     Meta read(char *data)
     {
         Meta m;
-        if (!full_read_(&m, sizeof(m)))
-            return {Meta::LAST_EV, 0, 0, 0, 0, 0, 0};
+        if (!util::full_read(fd_, &m, sizeof(m), "read() from dump file"))
+            return Meta::make_last();
         bswap_fields(m);
         if (m.ev >= Meta::LAST_EV)
             throw Corrupted{};
-        if (!full_read_(data, m.ndata))
-            throw Corrupted{};
+        if (!util::full_read(fd_, data, m.ndata, "read() from dump file"))
+            return Meta::make_last();
         return m;
     }
 };

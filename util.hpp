@@ -78,6 +78,19 @@ void full_write(int fd, const void *buf, size_t nbuf, const char *what)
     }
 }
 
+bool full_read(int fd, void *buf, size_t nbuf, const char *what)
+{
+    for (size_t nread = 0; nread < nbuf;) {
+        const ssize_t n = check_retval(
+            ::read(fd, reinterpret_cast<char *>(buf) + nread, nbuf - nread),
+            what);
+        if (!n)
+            return false;
+        nread += n;
+    }
+    return true;
+}
+
 void exec(std::vector<const char *> argv)
 {
     argv.push_back(nullptr);
